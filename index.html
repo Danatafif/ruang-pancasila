@@ -241,10 +241,13 @@
                                 <p class="text-xs">Jika Jawaban Salah</p>
                             </div>
                         </div>
-                        <div class="flex justify-center space-x-4">
-                            <button id="answer-correct-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Benar</button>
-                            <button id="answer-wrong-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Salah</button>
-                        </div>
+                        <div id="true-false-buttons" class="flex justify-center space-x-4">
+    <button id="answer-correct-btn" class="bg-green-500 ...">Benar</button>
+    <button id="answer-wrong-btn" class="bg-red-500 ...">Salah</button>
+</div>
+
+<div id="mcq-buttons" class="hidden grid grid-cols-2 gap-4">
+     </div>
                     </div>
                 </div>
             </main>
@@ -783,35 +786,70 @@
                 displayContainer.classList.remove('hidden');
 
                 const handleAnswer = (isCorrect) => {
-                    currentStudent.answeredQuestions.push(question.id);
-                    const pointsChange = isCorrect ? question.points : -question.penalty;
-                    currentStudent.score += pointsChange;
-                    if (currentStudent.score < 0) currentStudent.score = 0;
-                    
-                    document.getElementById('game-current-score').textContent = currentStudent.score;
+    currentStudent.answeredQuestions.push(question.id);
+    const pointsChange = isCorrect ? question.points : -question.penalty;
+    currentStudent.score += pointsChange;
+    if (currentStudent.score < 0) currentStudent.score = 0;
 
-                    displayContainer.classList.add('hidden');
-                    document.getElementById('scanner-instruction').classList.remove('hidden');
-                    document.getElementById('qr-scanner-container').classList.remove('hidden');
-                    
-                    if (currentStudent.score >= appData.session.maxPoints) {
-                        endGame('Selamat! Poin Maksimal Tercapai!');
-                    } else {
-                        html5QrCode.resume();
-                    }
-                };
-                
-                const correctBtn = document.getElementById('answer-correct-btn');
-                const wrongBtn = document.getElementById('answer-wrong-btn');
-                
-                const newCorrectBtn = correctBtn.cloneNode(true);
-                const newWrongBtn = wrongBtn.cloneNode(true);
-                
-                correctBtn.parentNode.replaceChild(newCorrectBtn, correctBtn);
-                wrongBtn.parentNode.replaceChild(newWrongBtn, wrongBtn);
+    document.getElementById('game-current-score').textContent = currentStudent.score;
 
-                newCorrectBtn.addEventListener('click', () => handleAnswer(true));
-                newWrongBtn.addEventListener('click', () => handleAnswer(false));
+    displayContainer.classList.add('hidden');
+    document.getElementById('scanner-instruction').classList.remove('hidden');
+    document.getElementById('qr-scanner-container').classList.remove('hidden');
+
+    if (currentStudent.score >= appData.session.maxPoints) {
+        endGame('Selamat! Poin Maksimal Tercapai!');
+    } else {
+        html5QrCode.resume();
+    }
+};
+
+// Ambil kontainer tombol dari HTML
+const trueFalseButtons = document.getElementById('true-false-buttons');
+const mcqButtonsContainer = document.getElementById('mcq-buttons');
+mcqButtonsContainer.innerHTML = ''; // Kosongkan tombol pilihan ganda sebelumnya
+
+if (question.type === 'mcq' || question.type === 'mcq_complex') {
+    // Sembunyikan tombol Benar/Salah, tampilkan tombol Pilihan Ganda
+    trueFalseButtons.classList.add('hidden');
+    mcqButtonsContainer.classList.remove('hidden');
+
+    // Buat tombol A, B, C, D secara dinamis
+    Object.keys(question.options).forEach(optionKey => {
+        const button = document.createElement('button');
+        button.textContent = optionKey;
+        button.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300';
+        button.addEventListener('click', () => {
+            // Periksa apakah jawaban benar
+            let isCorrect = false;
+            if (Array.isArray(question.correctAnswer)) { // Untuk Pilihan Ganda Kompleks
+                isCorrect = question.correctAnswer.includes(optionKey);
+            } else { // Untuk Pilihan Ganda biasa
+                isCorrect = question.correctAnswer === optionKey;
+            }
+            handleAnswer(isCorrect);
+        });
+        mcqButtonsContainer.appendChild(button);
+    });
+
+} else { // Untuk soal jenis Teks Saja (Benar/Salah)
+    // Tampilkan tombol Benar/Salah, sembunyikan tombol Pilihan Ganda
+    trueFalseButtons.classList.remove('hidden');
+    mcqButtonsContainer.classList.add('hidden');
+
+    // Gunakan event listener untuk tombol Benar/Salah yang sudah ada
+    const correctBtn = document.getElementById('answer-correct-btn');
+    const wrongBtn = document.getElementById('answer-wrong-btn');
+
+    const newCorrectBtn = correctBtn.cloneNode(true);
+    const newWrongBtn = wrongBtn.cloneNode(true);
+
+    correctBtn.parentNode.replaceChild(newCorrectBtn, correctBtn);
+    wrongBtn.parentNode.replaceChild(newWrongBtn, wrongBtn);
+
+    newCorrectBtn.addEventListener('click', () => handleAnswer(true));
+    newWrongBtn.addEventListener('click', () => handleAnswer(false));
+}
             } else {
                  showNotification('Barcode soal tidak valid.');
                  setTimeout(() => html5QrCode.resume(), 1000);
@@ -997,3 +1035,4 @@
     </script>
 </body>
 </html>
+
