@@ -317,7 +317,7 @@
         let html5QrCode;
         
         // --- Data Persistence (Terhubung ke Google Sheets) ---
-        const GOOGLE_SCRIPT_URL = 'GANTI_DENGAN_URL_WEB_APP_ANDA'; // <-- PENTING: GANTI URL INI
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzM0i57RmxedQnJTLT7fFwOFiJ6cOatKgCcGxCw3k-DL42mShsQckcR_94tiESCo1Po/exec';
 
         const saveData = async () => {
             showNotification('Menyimpan data...', false);
@@ -958,7 +958,6 @@
             if(selectedClass && selectedName) {
                 
                 // PERBAIKAN 3: LOG AKTIVITAS (ALTERNATIF)
-                // Kirim data log ke Apps Script
                 const logUrl = GOOGLE_SCRIPT_URL + `?action=logStart&class=${encodeURIComponent(selectedClass)}&student=${encodeURIComponent(selectedName)}`;
                 fetch(logUrl).catch(err => console.error('Gagal mengirim log:', err));
 
