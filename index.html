@@ -47,6 +47,10 @@
         input[type=number] {
             -moz-appearance: textfield;
         }
+        /* PERBAIKAN 1: MENGATASI SCROLL PANJANG DI DASBOR ADMIN */
+        #class-list {
+            max-height: 30vh; /* Membatasi tinggi maksimum menjadi 30% dari tinggi layar */
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased">
@@ -125,13 +129,13 @@
                 <div class="bg-white border p-6 rounded-2xl shadow-lg flex flex-col space-y-4 snap-start">
                     <h3 class="text-xl font-semibold border-b border-gray-200 pb-2 flex items-center"><i data-lucide="users" class="mr-2 text-yellow-500"></i>Manajemen Kelas & Murid</h3>
                     <div class="flex space-x-2">
-                        <input type="text" id="new-class-name" placeholder="Nama Kelas Baru (e.g., X-A)" class="flex-grow bg-gray-100 border border-gray-200 p-2 rounded-lg">
+                        <input type="text" id="new-class-name" placeholder="Nama Kelas Baru (e.g., 7A)" class="flex-grow bg-gray-100 border border-gray-200 p-2 rounded-lg">
                         <button id="add-class-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded-lg"><i data-lucide="plus"></i></button>
                     </div>
                     <div class="flex flex-col space-y-2">
                         <select id="class-select-for-student" class="w-full bg-gray-100 border border-gray-200 p-2 rounded-lg"></select>
                         <textarea id="new-student-list" rows="4" placeholder="Masukan nama murid, satu nama per baris." class="w-full bg-gray-100 border border-gray-200 p-2 rounded-lg"></textarea>
-                         <button id="add-students-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded-lg w-full"><i data-lucide="user-plus"></i> Tambah Murid dari Template</button>
+                         <button id="add-students-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold p-2 rounded-lg w-full"><i data-lucide="user-plus"></i> Tambah Murid</button>
                     </div>
                     <div id="class-list" class="flex-grow overflow-y-auto bg-gray-100 p-3 rounded-lg space-y-2">
                         </div>
@@ -150,9 +154,8 @@
                     </div>
 
                     <div class="space-y-2">
-                        <label class="font-medium text-gray-500">Gambar Soal (Opsional)</label>
-                        <input type="file" id="question-image" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-100 file:text-yellow-700 hover:file:bg-yellow-200">
-                        <img id="image-preview" src="" class="hidden w-full h-auto rounded-lg mt-2"/>
+                        <label class="font-medium text-gray-500">Link Gambar Soal (Opsional)</label>
+                        <input type="url" id="question-image-url" placeholder="Paste link gambar di sini..." class="w-full bg-gray-100 border border-gray-200 p-2 rounded-lg">
                     </div>
 
                     <textarea id="question-text" rows="3" placeholder="Tulis pertanyaan di sini..." class="w-full bg-gray-100 border border-gray-200 p-2 rounded-lg"></textarea>
@@ -242,15 +245,22 @@
                             </div>
                         </div>
                         <div id="true-false-buttons" class="flex justify-center space-x-4">
-    <button id="answer-correct-btn" class="bg-green-500 ...">Benar</button>
-    <button id="answer-wrong-btn" class="bg-red-500 ...">Salah</button>
-</div>
+                            <button id="answer-correct-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Benar</button>
+                            <button id="answer-wrong-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Salah</button>
+                        </div>
 
-<div id="mcq-buttons" class="hidden grid grid-cols-2 gap-4">
-     </div>
+                        <div id="mcq-buttons" class="hidden grid grid-cols-2 gap-4">
+                             </div>
                     </div>
                 </div>
             </main>
+
+            <footer class="mt-4 text-center">
+                <button id="submit-early-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg">
+                    <i data-lucide="send" class="inline-block mr-2"></i>Kirim Jawaban & Selesaikan Sesi
+                </button>
+            </footer>
+
         </div>
 
         <div id="notification" class="hidden fixed top-5 right-5 bg-red-600 text-white py-2 px-5 rounded-lg shadow-lg transition-transform translate-x-full">
@@ -286,7 +296,7 @@
         // --- State Management ---
         let appData = {
             classes: [],
-            students: {}, // { 'X-A': ['Budi', 'Ani'] }
+            students: {}, // { '7A': ['Budi', 'Ani'] }
             questions: [], // { id, text, points, penalty, type, image, options, correctAnswer }
             session: {
                 token: null,
@@ -303,23 +313,19 @@
             answeredQuestions: []
         };
 
-        let tempQuestionImage = null;
         let timerInterval;
         let html5QrCode;
         
         // --- Data Persistence (Terhubung ke Google Sheets) ---
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxg81q-Pi54hPFBEu7Uj6pXVFlWXnCMKAj-wnF7dkQF-R2MsflXRTS2pX308zCMnA6R/exec';
+        const GOOGLE_SCRIPT_URL = 'GANTI_DENGAN_URL_WEB_APP_ANDA'; // <-- PENTING: GANTI URL INI
 
         const saveData = async () => {
             showNotification('Menyimpan data...', false);
             try {
-                // Menggunakan 'text' sebagai body karena Apps Script mungkin lebih mudah menerima string
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Penting untuk menghindari error CORS saat POST ke Apps Script
-                    headers: {
-                      'Content-Type': 'text/plain;charset=utf-8',
-                    },
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(appData)
                 });
                 console.log("Proses simpan selesai.");
@@ -336,17 +342,19 @@
                 if (!response.ok) throw new Error('Gagal memuat data dari server');
                 const data = await response.json();
                 
-                // Jika data kosong di spreadsheet, data bisa jadi bukan object
                 if (typeof data === 'object' && data !== null) {
                     appData = data;
                 }
                 
-                // Pastikan properti default ada untuk menghindari error
                 appData.classes = appData.classes || [];
                 appData.students = appData.students || {};
                 appData.questions = appData.questions || [];
                 appData.session = appData.session || { token: null, duration: 15, maxPoints: 100 };
                 appData.sessionResults = appData.sessionResults || [];
+
+                document.getElementById('session-token').value = appData.session.token || '';
+                document.getElementById('session-duration').value = appData.session.duration || 15;
+                document.getElementById('session-max-points').value = appData.session.maxPoints || 100;
 
                 console.log("Data berhasil dimuat dari Google Script!");
             } catch (error) {
@@ -392,30 +400,38 @@
             classListDiv.innerHTML = '';
             classSelect.innerHTML = '<option value="">Pilih Kelas</option>';
 
-            appData.classes.forEach(className => {
+            (appData.classes || []).forEach(className => {
                 const option = document.createElement('option');
                 option.value = className;
                 option.textContent = className;
                 classSelect.appendChild(option);
 
-                const classContainer = document.createElement('div');
-                classContainer.className = 'bg-white border p-3 rounded-lg';
+                const classDetails = document.createElement('details');
+                classDetails.className = 'bg-white border rounded-lg overflow-hidden';
+
+                const classSummary = document.createElement('summary');
+                classSummary.className = 'p-3 font-bold cursor-pointer hover:bg-gray-50 flex justify-between items-center';
+                classSummary.innerHTML = `
+                    <span>${className}</span>
+                    <button data-class-name="${className}" class="delete-class-btn text-red-500 hover:text-red-700 text-xl font-bold">&times;</button>
+                `;
+
                 let studentsHTML = (appData.students[className] || [])
                     .map((student, index) => `<span class="bg-gray-200 text-gray-700 text-sm py-1 px-2 rounded-full">${index + 1}. ${student}</span>`)
                     .join(' ');
-                
-                classContainer.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-bold">${className}</h4>
-                        <button data-class-name="${className}" class="delete-class-btn text-red-500 hover:text-red-600">&times;</button>
-                    </div>
-                    <div class="flex flex-wrap gap-2 mt-2">${studentsHTML || '<i class="text-gray-400">Belum ada murid</i>'}</div>
-                `;
-                classListDiv.appendChild(classContainer);
+
+                const studentContainer = document.createElement('div');
+                studentContainer.className = 'p-3 border-t border-gray-200 flex flex-wrap gap-2';
+                studentContainer.innerHTML = studentsHTML || '<i class="text-gray-400">Belum ada murid</i>';
+
+                classDetails.appendChild(classSummary);
+                classDetails.appendChild(studentContainer);
+                classListDiv.appendChild(classDetails);
             });
             
             document.querySelectorAll('.delete-class-btn').forEach(btn => {
                  btn.addEventListener('click', (e) => {
+                    e.preventDefault(); // Mencegah details menutup/membuka
                     const className = e.currentTarget.dataset.className;
                     appData.classes = appData.classes.filter(c => c !== className);
                     delete appData.students[className];
@@ -428,7 +444,7 @@
         const renderQuestionList = () => {
             const questionListDiv = document.getElementById('question-list');
             questionListDiv.innerHTML = '';
-            appData.questions.forEach((q) => {
+            (appData.questions || []).forEach((q) => {
                 const card = document.createElement('div');
                 card.className = 'bg-white border p-4 rounded-lg flex flex-col items-center text-center space-y-2';
                 
@@ -460,11 +476,12 @@
                 `;
                 questionListDiv.appendChild(card);
                 
+                // PERBAIKAN 6: BARCODE KONTRAS TINGGI
                 new QRCode(document.getElementById(`qr-code-${q.id}`), {
                     text: q.id,
                     width: 128,
                     height: 128,
-                    colorDark : "#111827",
+                    colorDark : "#000000",
                     colorLight : "#ffffff",
                     correctLevel : QRCode.CorrectLevel.H
                 });
@@ -497,7 +514,7 @@
             const resultsListDiv = document.getElementById('session-results-list');
             resultsListDiv.innerHTML = '';
 
-            if (appData.sessionResults.length === 0) {
+            if (!appData.sessionResults || appData.sessionResults.length === 0) {
                 resultsListDiv.innerHTML = `<p class="text-center text-gray-400 text-sm">Belum ada hasil sesi.</p>`;
                 return;
             }
@@ -593,29 +610,12 @@
             }
         });
 
-        document.getElementById('question-image').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const preview = document.getElementById('image-preview');
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    tempQuestionImage = event.target.result;
-                    preview.src = tempQuestionImage;
-                    preview.classList.remove('hidden');
-                }
-                reader.readAsDataURL(file);
-            } else {
-                tempQuestionImage = null;
-                preview.src = '';
-                preview.classList.add('hidden');
-            }
-        });
-        
         document.getElementById('add-question-btn').addEventListener('click', () => {
             const type = document.getElementById('question-type').value;
             const text = document.getElementById('question-text').value.trim();
             const points = parseInt(document.getElementById('question-points').value);
             const penalty = parseInt(document.getElementById('question-penalty').value);
+            const imageUrl = document.getElementById('question-image-url').value.trim();
 
             if (!text || isNaN(points) || isNaN(penalty) || points <= 0 || penalty < 0) {
                 showNotification('Harap isi pertanyaan, poin benar, dan poin salah.');
@@ -628,7 +628,7 @@
                 points,
                 penalty,
                 type,
-                image: tempQuestionImage
+                image: imageUrl || null
             };
             
             if (type === 'mcq' || type === 'mcq_complex') {
@@ -668,10 +668,7 @@
             document.getElementById('question-text').value = '';
             document.getElementById('question-points').value = '';
             document.getElementById('question-penalty').value = '';
-            document.getElementById('question-image').value = '';
-            document.getElementById('image-preview').classList.add('hidden');
-            document.getElementById('image-preview').src = '';
-            tempQuestionImage = null;
+            document.getElementById('question-image-url').value = '';
             if (type === 'mcq' || type === 'mcq_complex') {
                  renderMcqInputs(type); // to clear fields
             }
@@ -692,7 +689,7 @@
         });
 
         document.getElementById('download-csv-btn').addEventListener('click', () => {
-            if (appData.sessionResults.length === 0) {
+            if (!appData.sessionResults || appData.sessionResults.length === 0) {
                 showNotification('Tidak ada data hasil untuk diunduh.');
                 return;
             }
@@ -786,70 +783,64 @@
                 displayContainer.classList.remove('hidden');
 
                 const handleAnswer = (isCorrect) => {
-    currentStudent.answeredQuestions.push(question.id);
-    const pointsChange = isCorrect ? question.points : -question.penalty;
-    currentStudent.score += pointsChange;
-    if (currentStudent.score < 0) currentStudent.score = 0;
+                    currentStudent.answeredQuestions.push(question.id);
+                    const pointsChange = isCorrect ? question.points : -question.penalty;
+                    currentStudent.score += pointsChange;
+                    if (currentStudent.score < 0) currentStudent.score = 0;
+                    
+                    document.getElementById('game-current-score').textContent = currentStudent.score;
 
-    document.getElementById('game-current-score').textContent = currentStudent.score;
+                    displayContainer.classList.add('hidden');
+                    document.getElementById('scanner-instruction').classList.remove('hidden');
+                    document.getElementById('qr-scanner-container').classList.remove('hidden');
+                    
+                    if (currentStudent.score >= appData.session.maxPoints) {
+                        endGame('Selamat! Poin Maksimal Tercapai!');
+                    } else {
+                        html5QrCode.resume();
+                    }
+                };
 
-    displayContainer.classList.add('hidden');
-    document.getElementById('scanner-instruction').classList.remove('hidden');
-    document.getElementById('qr-scanner-container').classList.remove('hidden');
+                const trueFalseButtons = document.getElementById('true-false-buttons');
+                const mcqButtonsContainer = document.getElementById('mcq-buttons');
+                mcqButtonsContainer.innerHTML = ''; 
 
-    if (currentStudent.score >= appData.session.maxPoints) {
-        endGame('Selamat! Poin Maksimal Tercapai!');
-    } else {
-        html5QrCode.resume();
-    }
-};
+                if (question.type === 'mcq' || question.type === 'mcq_complex') {
+                    trueFalseButtons.classList.add('hidden');
+                    mcqButtonsContainer.classList.remove('hidden');
 
-// Ambil kontainer tombol dari HTML
-const trueFalseButtons = document.getElementById('true-false-buttons');
-const mcqButtonsContainer = document.getElementById('mcq-buttons');
-mcqButtonsContainer.innerHTML = ''; // Kosongkan tombol pilihan ganda sebelumnya
+                    Object.keys(question.options).forEach(optionKey => {
+                        const button = document.createElement('button');
+                        button.textContent = optionKey;
+                        button.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300';
+                        button.addEventListener('click', () => {
+                            let isCorrect = false;
+                            if (Array.isArray(question.correctAnswer)) { 
+                                isCorrect = question.correctAnswer.includes(optionKey);
+                            } else {
+                                isCorrect = question.correctAnswer === optionKey;
+                            }
+                            handleAnswer(isCorrect);
+                        });
+                        mcqButtonsContainer.appendChild(button);
+                    });
 
-if (question.type === 'mcq' || question.type === 'mcq_complex') {
-    // Sembunyikan tombol Benar/Salah, tampilkan tombol Pilihan Ganda
-    trueFalseButtons.classList.add('hidden');
-    mcqButtonsContainer.classList.remove('hidden');
+                } else { 
+                    trueFalseButtons.classList.remove('hidden');
+                    mcqButtonsContainer.classList.add('hidden');
+                    
+                    const correctBtn = document.getElementById('answer-correct-btn');
+                    const wrongBtn = document.getElementById('answer-wrong-btn');
+                    
+                    const newCorrectBtn = correctBtn.cloneNode(true);
+                    const newWrongBtn = wrongBtn.cloneNode(true);
+                    
+                    correctBtn.parentNode.replaceChild(newCorrectBtn, correctBtn);
+                    wrongBtn.parentNode.replaceChild(newWrongBtn, wrongBtn);
 
-    // Buat tombol A, B, C, D secara dinamis
-    Object.keys(question.options).forEach(optionKey => {
-        const button = document.createElement('button');
-        button.textContent = optionKey;
-        button.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300';
-        button.addEventListener('click', () => {
-            // Periksa apakah jawaban benar
-            let isCorrect = false;
-            if (Array.isArray(question.correctAnswer)) { // Untuk Pilihan Ganda Kompleks
-                isCorrect = question.correctAnswer.includes(optionKey);
-            } else { // Untuk Pilihan Ganda biasa
-                isCorrect = question.correctAnswer === optionKey;
-            }
-            handleAnswer(isCorrect);
-        });
-        mcqButtonsContainer.appendChild(button);
-    });
-
-} else { // Untuk soal jenis Teks Saja (Benar/Salah)
-    // Tampilkan tombol Benar/Salah, sembunyikan tombol Pilihan Ganda
-    trueFalseButtons.classList.remove('hidden');
-    mcqButtonsContainer.classList.add('hidden');
-
-    // Gunakan event listener untuk tombol Benar/Salah yang sudah ada
-    const correctBtn = document.getElementById('answer-correct-btn');
-    const wrongBtn = document.getElementById('answer-wrong-btn');
-
-    const newCorrectBtn = correctBtn.cloneNode(true);
-    const newWrongBtn = wrongBtn.cloneNode(true);
-
-    correctBtn.parentNode.replaceChild(newCorrectBtn, correctBtn);
-    wrongBtn.parentNode.replaceChild(newWrongBtn, wrongBtn);
-
-    newCorrectBtn.addEventListener('click', () => handleAnswer(true));
-    newWrongBtn.addEventListener('click', () => handleAnswer(false));
-}
+                    newCorrectBtn.addEventListener('click', () => handleAnswer(true));
+                    newWrongBtn.addEventListener('click', () => handleAnswer(false));
+                }
             } else {
                  showNotification('Barcode soal tidak valid.');
                  setTimeout(() => html5QrCode.resume(), 1000);
@@ -880,9 +871,9 @@ if (question.type === 'mcq' || question.type === 'mcq_complex') {
         };
 
         const saveResultAndRender = () => {
-            if (!currentStudent.name) return; // Don't save if no student is active
+            if (!currentStudent.name) return; 
             
-            const studentIndex = appData.students[currentStudent.class]?.indexOf(currentStudent.name);
+            const studentIndex = (appData.students[currentStudent.class] || []).indexOf(currentStudent.name);
             const studentNumber = studentIndex !== -1 ? studentIndex + 1 : '';
 
              const result = {
@@ -892,7 +883,11 @@ if (question.type === 'mcq' || question.type === 'mcq_complex') {
                 score: currentStudent.score,
                 completedAt: new Date().toLocaleString('id-ID', { hour12: false })
             };
+            
+            // Hapus hasil lama jika ada, lalu tambahkan hasil baru
+            appData.sessionResults = (appData.sessionResults || []).filter(r => r.name !== currentStudent.name || r.class !== currentStudent.class);
             appData.sessionResults.push(result);
+            
             renderSessionResults();
             saveData();
         }
@@ -922,7 +917,7 @@ if (question.type === 'mcq' || question.type === 'mcq_complex') {
             if (token && token === appData.session.token) {
                 const classSelect = document.getElementById('student-select-class');
                 classSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>';
-                appData.classes.forEach(c => {
+                (appData.classes || []).forEach(c => {
                     const opt = document.createElement('option');
                     opt.value = c;
                     opt.textContent = c;
@@ -952,7 +947,21 @@ if (question.type === 'mcq' || question.type === 'mcq_complex') {
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const selectedClass = document.getElementById('student-select-class').value;
             const selectedName = document.getElementById('student-select-name').value;
+
+            // PERBAIKAN 4: SATU TOKEN UNTUK SATU SISWA
+            const alreadyPlayed = (appData.sessionResults || []).find(r => r.name === selectedName && r.class === selectedClass);
+            if (alreadyPlayed) {
+                showNotification('Anda sudah menyelesaikan sesi ini. Harap tunggu token baru dari guru.');
+                return; 
+            }
+
             if(selectedClass && selectedName) {
+                
+                // PERBAIKAN 3: LOG AKTIVITAS (ALTERNATIF)
+                // Kirim data log ke Apps Script
+                const logUrl = GOOGLE_SCRIPT_URL + `?action=logStart&class=${encodeURIComponent(selectedClass)}&student=${encodeURIComponent(selectedName)}`;
+                fetch(logUrl).catch(err => console.error('Gagal mengirim log:', err));
+
                 const studentIndex = appData.students[selectedClass].indexOf(selectedName);
                 const studentNumber = studentIndex !== -1 ? studentIndex + 1 : '';
 
@@ -984,6 +993,12 @@ if (question.type === 'mcq' || question.type === 'mcq_complex') {
              currentStudent = { name: '', class: '', score: 0, answeredQuestions: [] };
              document.getElementById('student-token').value = '';
              showView('student-token-view');
+        });
+
+        document.getElementById('submit-early-btn').addEventListener('click', () => {
+            if (confirm('Apakah Anda yakin ingin menyelesaikan sesi dan mengirim jawaban?')) {
+                endGame('Sesi Selesai!');
+            }
         });
 
         // Anti-Cheat (Tab switch detection)
@@ -1035,4 +1050,3 @@ if (question.type === 'mcq' || question.type === 'mcq_complex') {
     </script>
 </body>
 </html>
-
